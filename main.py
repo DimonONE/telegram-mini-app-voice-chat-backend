@@ -3,13 +3,15 @@ FastAPI WebSocket Signaling Server for Telegram Mini App Voice/Video Chat
 Handles WebRTC signaling (offer, answer, ICE candidates) and room management
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Request, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Set, Optional
 import json
 import asyncio
 import os
 from telegram_bot import bot
+from dotenv import load_dotenv
+load_dotenv()
 
 app = FastAPI(title="Telegram Mini App Signaling Server")
 
@@ -359,6 +361,48 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
             "user_id": user_id
         })
 
+@app.post("/api/send-miniapp-button")
+async def send_miniapp_button(chat_id: int):
+    """
+    Отправить пользователю кнопку "Открыть Mini App"
+    """
+    if not bot.is_configured():
+        return {"success": False, "message": "Bot не настроен"}
+    
+    miniapp_url = "https://t.me/your_bot_name/your-miniapp"  # <-- замени
+    text = "🔥 Нажми, чтобы открыть голосовой чат Mini App"
+    
+    success = await bot.send_open_miniapp_button(chat_id, text, miniapp_url)
+    return {"success": success}
+
+
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """
+    Webhook для входящих обновлений Telegram
+    """
+    data = await request.json()
+
+    if "message" in data:
+        message = data["message"]
+        chat_id = message["chat"]["id"]
+        text = message.get("text", "")
+        bot_token =  os.getenv("TELEGRAM_BOT_TOKEN")
+
+        print("bot_token", bot_token)
+        # 🔹 Тестовая команда
+        if text.strip().lower() == "/ping":
+            print("message message message")
+            await bot.send_message(chat_id, "🏓 Pong!")
+
+            return {"ok": True}
+
+        # 🔹 Твоя будущая кнопка Mini App
+        if text.strip().lower() in ["/start", "/open"]:
+            await bot.send_open_miniapp(chat_id)
+            return {"ok": True}
+
+    return {"ok": True}
 
 if __name__ == "__main__":
     import uvicorn

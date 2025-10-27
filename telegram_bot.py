@@ -7,7 +7,8 @@ import httpx
 import os
 from typing import Optional, Dict, Any
 import asyncio
-
+from dotenv import load_dotenv
+load_dotenv()
 
 class TelegramBot:
     """Telegram Bot API client"""
@@ -128,6 +129,68 @@ class TelegramBot:
         text = f"🎤 <b>{speaker_name}</b> говорит сейчас"
         return await self.send_message(user_id, text)
 
+    async def send_open_miniapp_button(self, chat_id: int, text: str, miniapp_url: str) -> bool:
+        """
+        Отправить сообщение с кнопкой "Открыть Mini App"
+        """
+        if not self.is_configured():
+            print("Bot token not configured, cannot send message")
+            return False
 
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    f"{self.base_url}/sendMessage",
+                    json={
+                        "chat_id": chat_id,
+                        "text": text,
+                        "reply_markup": {
+                            "inline_keyboard": [
+                                [
+                                    {
+                                        "text": "🚀 Открыть Mini App",
+                                        "web_app": {
+                                            "url": miniapp_url  # URL твоего мини-приложения
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data.get("ok", False)
+            except Exception as e:
+                print(f"Error sending Mini App button: {e}")
+                return False
+
+    async def send_open_miniapp(chat_id: int):
+        """
+        Отправить кнопку 'Открыть Mini App'
+        """
+        miniapp_url = "https://t.me/your_bot_username/voicechat"  # заменишь на свой
+        text = "🎙 Добро пожаловать! Нажмите, чтобы открыть Mini App."
+        
+        # Inline-кнопка с web_app
+        import httpx
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"https://api.telegram.org/bot{bot.bot_token}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text": text,
+                    "reply_markup": {
+                        "inline_keyboard": [
+                            [
+                                {
+                                    "text": "🚀 Открыть Mini App",
+                                    "web_app": {"url": miniapp_url}
+                                }
+                            ]
+                        ]
+                    }
+                }
+            )
 # Global bot instance
 bot = TelegramBot()
